@@ -1,0 +1,40 @@
+name: Build standalone file
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build standalone HTML
+        run: ./build.sh
+
+      - name: Verify output exists
+        run: test -f dist/did-i-move.html
+
+      - name: Verify output contains inlined CSS
+        run: grep -q '<style>' dist/did-i-move.html
+
+      - name: Verify output contains inlined JS
+        run: grep -q '<script>' dist/did-i-move.html
+
+      - name: Verify output contains key functions
+        run: |
+          grep -q 'function render' dist/did-i-move.html
+          grep -q 'function loadState' dist/did-i-move.html
+
+      - name: Verify no external references remain
+        run: |
+          ! grep -q 'href="style.css"' dist/did-i-move.html
+          ! grep -q 'src="app.js"' dist/did-i-move.html
+
+      - name: Upload standalone file
+        uses: actions/upload-artifact@v7
+        with:
+          name: did-i-move-standalone
+          path: dist/did-i-move.html

@@ -1,0 +1,69 @@
+<!--
+  Did I Move?
+  Copyright (C) 2026 Maxim Tam
+
+  This program is free software: you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation, either version 3 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License
+  along with this program. If not, see <https://www.gnu.org/licenses/>.
+-->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Did I Move?</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="header">
+      <h1><a href="#" id="link-home">Did I Move?</a></h1>
+      <div class="header-buttons">
+        <button id="btn-view-guide" title="Every exercise, every level, how to do it">guide</button>
+        <button id="btn-view-log" title="Past sessions">log</button>
+        <button id="btn-export" title="Show a copy-pasteable string of your progress">export</button>
+        <button id="btn-import" title="Paste an exported string to merge it in">import</button>
+        <button id="btn-fullscreen" title="Toggle fullscreen">fullscreen</button>
+        <button id="btn-dark-mode" title="Toggle dark mode">dark</button>
+      </div>
+    </div>
+
+    <main>
+      <section id="view-home" class="view"></section>
+      <section id="view-session" class="view" hidden></section>
+      <section id="view-guide" class="view" hidden></section>
+      <section id="view-log" class="view" hidden></section>
+    </main>
+
+    <dialog id="data-dialog">
+      <h2 id="data-dialog-title">Export</h2>
+      <p id="data-dialog-hint"></p>
+      <textarea
+        id="data-text"
+        spellcheck="false"
+        autocapitalize="off"
+        autocomplete="off"
+        autocorrect="off"
+      ></textarea>
+      <div class="dialog-actions">
+        <button id="btn-data-close">close</button>
+        <button id="btn-data-primary">copy</button>
+      </div>
+    </dialog>
+
+    <footer>
+      <a href="https://github.com/maximtam/Did-I-Move">GitHub</a>
+      <span>Did I Move? &copy; 2026 Maxim Tam &middot; GPLv3</span>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
