@@ -19,16 +19,24 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f5f1e8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Did I Move?</title>
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="header">
       <h1><a href="#" id="link-home">Did I Move?</a></h1>
-      <div class="header-buttons">
+      <nav class="nav" aria-label="Main">
+        <button id="btn-view-home" title="Today's plan">today</button>
         <button id="btn-view-guide" title="Every exercise, every level, how to do it">guide</button>
         <button id="btn-view-log" title="Past sessions">log</button>
+      </nav>
+      <button id="btn-more" class="btn-more" aria-label="More" aria-expanded="false" aria-controls="header-tools">&#8943;</button>
+      <div class="header-tools" id="header-tools">
         <button id="btn-export" title="Show a copy-pasteable string of your progress">export</button>
         <button id="btn-import" title="Paste an exported string to merge it in">import</button>
         <button id="btn-fullscreen" title="Toggle fullscreen">fullscreen</button>

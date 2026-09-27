@@ -882,6 +882,7 @@ function render() {
   else if (view === "guide") renderGuide();
   else if (view === "log") renderLog();
   updateTitle();
+  syncNav();
   syncWakeLock();
 }
 
@@ -1383,8 +1384,34 @@ document.getElementById("link-home").addEventListener("click", (e) => {
   e.preventDefault();
   showView(state.active ? "session" : "home");
 });
+document.getElementById("btn-view-home").addEventListener("click", () => showView(state.active ? "session" : "home"));
 document.getElementById("btn-view-guide").addEventListener("click", () => showView(view === "guide" ? (state.active ? "session" : "home") : "guide"));
 document.getElementById("btn-view-log").addEventListener("click", () => showView(view === "log" ? (state.active ? "session" : "home") : "log"));
+
+// The utility buttons collapse behind a "more" toggle on narrow screens.
+const btnMore = document.getElementById("btn-more");
+const headerEl = document.querySelector(".header");
+function setToolsOpen(open) {
+  headerEl.classList.toggle("tools-open", open);
+  btnMore.setAttribute("aria-expanded", String(open));
+}
+btnMore.addEventListener("click", () => setToolsOpen(!headerEl.classList.contains("tools-open")));
+document.getElementById("header-tools").addEventListener("click", (e) => {
+  if (e.target.closest("button")) setToolsOpen(false);
+});
+document.addEventListener("click", (e) => {
+  if (headerEl.classList.contains("tools-open") && !e.target.closest(".btn-more, .header-tools")) setToolsOpen(false);
+});
+
+function syncNav() {
+  const current = view === "session" ? "home" : view;
+  for (const name of ["home", "guide", "log"]) {
+    const b = document.getElementById(`btn-view-${name}`);
+    b.classList.toggle("active", name === current);
+    if (name === current) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Reminder and title
