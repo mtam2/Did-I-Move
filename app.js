@@ -96,6 +96,7 @@ const FAMILIES = {
         name: "Bodyweight squat",
         sets: 3,
         reps: 12,
+        image: "06b-bodyweight-squat-deep",
         how: "Same squat, deeper if you can: aim for thighs parallel to the floor.",
         cues: ["Weight in your mid-foot", "Pause a second at the bottom", "Stand all the way up and squeeze glutes"],
         avoid: "Bouncing out of the bottom.",
@@ -337,6 +338,7 @@ const FAMILIES = {
         sets: 3,
         seconds: 30,
         perSide: true,
+        image: "26b-side-plank-leg-raised",
         how: "Same side plank, longer. Optionally lift the top leg for the last ten seconds.",
         cues: ["Long line from heel to head", "Steady breathing", "Both sides equal"],
         avoid: "Cheating on the weaker side. It gets the same time.",
@@ -526,10 +528,73 @@ function targetLabel(step) {
   return step.sets > 1 ? `${step.sets} × ${work}${side}` : `${work}${side}`;
 }
 
+// ---------------------------------------------------------------------------
+// Illustrations. One card per distinct movement; levels that differ only in
+// reps or hold time share artwork. Files live in images/ as WebP. The
+// standalone build inlines them as data URIs via window.DIM_IMAGES.
+// ---------------------------------------------------------------------------
+
+const IMAGES = {
+  "Wall push-up": "01-wall-push-up",
+  "Incline push-up": "02-incline-push-up",
+  "Knee push-up": "03-knee-push-up",
+  "Push-up": "04-push-up",
+  "Sit-to-stand": "05-sit-to-stand",
+  "Bodyweight squat": "06-bodyweight-squat",
+  "Reverse lunge": "07-reverse-lunge",
+  "Split squat": "08-split-squat",
+  "Glute bridge": "09-glute-bridge",
+  "Single-leg glute bridge": "10-single-leg-glute-bridge",
+  "Knee plank": "11-knee-plank",
+  Plank: "12-plank",
+  "Plank shoulder taps": "13-plank-shoulder-taps",
+  "Superman hold": "14-superman-hold",
+  Superman: "15-superman",
+  "Reverse snow angel": "16-reverse-snow-angel",
+  "Prone Y-T-W": "17-prone-y-t-w",
+  "Good morning": "18-good-morning",
+  "Single-leg deadlift (touch down)": "19-single-leg-deadlift-touch-down",
+  "Step-up": "20-step-up",
+  "Single-leg deadlift": "21-single-leg-deadlift",
+  "Dead bug": "22-dead-bug",
+  "Bird dog": "23-bird-dog",
+  "Hollow hold": "24-hollow-hold",
+  "Knee side plank": "25-knee-side-plank",
+  "Side plank": "26-side-plank",
+  "March in place": "27-march-in-place",
+  "Arm circles": "28-arm-circles",
+  "Hip circles": "29-hip-circles",
+  "Bodyweight good mornings": "30-bodyweight-good-mornings",
+  "Chest stretch": "31-chest-stretch",
+  "Quad stretch": "32-quad-stretch",
+  "Hamstring stretch": "33-hamstring-stretch",
+  "Cat-cow": "34-cat-cow",
+  "Child's pose": "35-childs-pose",
+  "Hip flexor stretch": "36-hip-flexor-stretch",
+  "Figure-4 stretch": "37-figure-4-stretch",
+  "Doorway chest stretch": "38-doorway-chest-stretch",
+  "Calf stretch": "39-calf-stretch",
+  "Easy walk or march": "40-easy-walk-or-march",
+};
+
+function imageSrc(item) {
+  const key = item.image || IMAGES[item.name];
+  if (!key) return "";
+  const inlined = window.DIM_IMAGES && window.DIM_IMAGES[key];
+  return inlined || `images/${key}.webp`;
+}
+
+function imageTag(item, cls) {
+  const src = imageSrc(item);
+  if (!src) return "";
+  return `<img class="${cls}" src="${src}" alt="${esc(item.name)}" width="1200" height="800" loading="lazy" decoding="async" />`;
+}
+
 function toStep(kind, item, extra) {
   return {
     kind,
     name: item.name,
+    image: item.image || "",
     sets: item.sets || 1,
     reps: item.reps || 0,
     seconds: item.seconds || 0,
@@ -1160,6 +1225,7 @@ function renderSession() {
       <div class="step-kind">${stepKindLabel(step)}${mainNo ? ` ${mainNo} of ${mainSteps}` : ""}</div>
       <h2 class="step-name">${esc(step.name)}</h2>
       <div class="step-target">${esc(targetLabel(step))}${setLabel ? ` · ${setLabel}` : ""}</div>
+      ${imageTag(step, "step-image")}
       ${prevSets.length ? `<div class="step-prev">done so far: ${prevSets.map((v) => (timed ? formatClock(v) + "s" : v)).join(", ")}</div>` : ""}
       ${control}
       <details class="step-how" ${a.setIdx === 0 && a.phase === "work" ? "open" : ""}>
@@ -1283,6 +1349,7 @@ function renderGuide() {
               <span class="level-target">${esc(targetLabel(toStep("main", lv)))}</span>
               ${i === cur ? `<span class="level-badge">current</span>` : ""}
             </summary>
+            ${imageTag(lv, "level-image")}
             <p>${esc(lv.how)}</p>
             <ul class="cues">${lv.cues.map((c) => `<li>${esc(c)}</li>`).join("")}</ul>
             <p class="avoid"><strong>Watch out:</strong> ${esc(lv.avoid)}</p>
@@ -1306,6 +1373,7 @@ function renderGuide() {
           (it) => `
         <details class="level">
           <summary><span class="level-name">${esc(it.name)}</span><span class="level-target">${esc(targetLabel(toStep("x", it)))}</span></summary>
+          ${imageTag(it, "level-image")}
           <p>${esc(it.how)}</p>
         </details>`,
         )

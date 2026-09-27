@@ -66,7 +66,17 @@ The development version is split into separate files (`index.html`, `style.css`,
 ./build.sh
 ```
 
-This outputs `dist/did-i-move.html` -- one file you can drop anywhere and open offline.
+This outputs `dist/did-i-move.html` -- one file you can drop anywhere and open offline. The exercise illustrations in `images/` are inlined as data URIs, which is most of the file's size (about 1.5 MB).
+
+## Illustrations
+
+Every exercise has an illustration card in `images/`, generated with ChatGPT from the prompt in `exercise-image-prompt.md` and stored as 1200px WebP. Levels that differ only in reps or hold time share a card. To regenerate or add one, follow the workflow notes at the end of that file, export the PNG, then:
+
+```sh
+cwebp -q 82 -resize 1200 0 new-card.png -o images/NN-slug.webp
+```
+
+and map the exercise name to the file in the `IMAGES` table in `app.js`.
 
 ## FAQ
 

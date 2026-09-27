@@ -489,6 +489,28 @@ body.fullscreen .nav {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
+.step-image,
+.level-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  border-radius: 10px;
+  background: #fffdf6;
+  border: 1px solid var(--border-light);
+  object-fit: cover;
+}
+.step-image {
+  margin: 14px 0 4px;
+}
+.level-image {
+  margin: 8px 0 4px;
+  max-width: 480px;
+}
+body.dark .step-image,
+body.dark .level-image {
+  filter: brightness(0.9);
+}
 .step-prev {
   font-size: 0.8rem;
   color: var(--text-faintest);
