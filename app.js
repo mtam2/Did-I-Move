@@ -415,6 +415,7 @@ function loadState() {
       const merged = { ...base, ...saved };
       merged.settings = { ...base.settings, ...(saved.settings || {}) };
       merged.progress = { ...base.progress, ...(saved.progress || {}) };
+      for (const key of Object.keys(FAMILIES)) merged.progress[key] = sanitizeProgress(key, merged.progress[key]);
       if (!Array.isArray(merged.sessions)) merged.sessions = [];
       return merged;
     }
@@ -422,6 +423,16 @@ function loadState() {
     console.warn("Failed to load state:", e);
   }
   return base;
+}
+
+// A level must be an integer index into the family's ladder. Anything else
+// (a fractional or out-of-range value from a bad import) falls back to a
+// safe value instead of crashing every render.
+function sanitizeProgress(familyKey, p) {
+  const max = FAMILIES[familyKey].levels.length - 1;
+  const level = p && Number.isInteger(p.level) ? Math.min(Math.max(p.level, 0), max) : 0;
+  const easy = p && Number.isInteger(p.easy) && p.easy >= 0 ? p.easy : 0;
+  return { level, easy };
 }
 
 function saveState() {
@@ -1635,7 +1646,7 @@ async function importString(text) {
 
   for (const key of Object.keys(FAMILIES)) {
     const theirs = data.progress[key];
-    if (!theirs || typeof theirs.level !== "number") continue;
+    if (!theirs || !Number.isInteger(theirs.level) || theirs.level < 0) continue;
     const max = FAMILIES[key].levels.length - 1;
     if (theirs.level > state.progress[key].level)
       state.progress[key] = { level: Math.min(theirs.level, max), easy: 0 };
