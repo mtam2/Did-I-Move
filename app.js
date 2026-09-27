@@ -432,6 +432,16 @@ function saveState() {
   }
 }
 
+// Another tab wrote newer state. Adopt it so this tab's next save cannot
+// overwrite it with a stale snapshot. The storage event only fires in the
+// tabs that did not perform the write.
+window.addEventListener("storage", (e) => {
+  if (e.key !== null && e.key !== STORAGE_KEY) return;
+  state = loadState();
+  if (!state.active) stopTimer();
+  render();
+});
+
 // ---------------------------------------------------------------------------
 // Dates and streaks. Days are local calendar days, keyed "YYYY-MM-DD".
 // ---------------------------------------------------------------------------
