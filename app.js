@@ -1263,7 +1263,9 @@ function renderSession() {
   el.querySelectorAll("[data-fb]").forEach((b) => (b.onclick = () => giveFeedback(b.dataset.fb)));
 
   if (timed && a.phase === "work") {
-    const finishTimed = () => {
+    // value: seconds actually held; defaults to the full target when the
+    // timer runs out on its own.
+    const finishTimed = (value) => {
       // For per-side holds the second side starts after a short switch pause.
       if (step.perSide && a.side === 0) {
         a.side = 1;
@@ -1273,7 +1275,7 @@ function renderSession() {
         render();
         return;
       }
-      completeSet(step.seconds);
+      completeSet(typeof value === "number" ? value : step.seconds);
     };
     const startSecondSide = () => {
       startTimer(step.seconds, finishTimed);
@@ -1289,7 +1291,7 @@ function renderSession() {
     on("#btn-timer-done", () => {
       const remaining = timer ? (timer.running ? (timer.endsAt - Date.now()) / 1000 : timer.remaining) : step.seconds;
       stopTimer();
-      completeSet(Math.max(1, Math.round(step.seconds - remaining)));
+      finishTimed(Math.max(1, Math.round(step.seconds - remaining)));
     });
   }
   if (!timed && a.phase === "work") {
