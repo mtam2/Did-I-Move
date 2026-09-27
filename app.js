@@ -957,7 +957,10 @@ function showView(name) {
   render();
 }
 
+let renderedDay = "";
+
 function render() {
+  renderedDay = dayKey(Date.now());
   if (state.active && view === "home") view = "session";
   for (const name of ["home", "session", "guide", "log"]) {
     document.getElementById(`view-${name}`).hidden = name !== view;
@@ -1531,7 +1534,19 @@ function updateTitle() {
   document.title = reminderDue() ? `(!) ${BASE_TITLE}` : BASE_TITLE;
 }
 
+// A tab left open overnight keeps showing yesterday's status, streak, and
+// heatmap until something re-renders. Re-render when the day rolls over,
+// checked on the reminder interval and whenever the tab becomes visible.
+function refreshIfDayChanged() {
+  if (renderedDay && dayKey(Date.now()) !== renderedDay) render();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") refreshIfDayChanged();
+});
+window.addEventListener("focus", refreshIfDayChanged);
+
 function checkReminder() {
+  refreshIfDayChanged();
   updateTitle();
   if (!reminderDue()) return;
   const today = dayKey(Date.now());
