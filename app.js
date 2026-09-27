@@ -795,6 +795,9 @@ function finishSession() {
     });
     if (r.skipped || a.short) return; // a minimum day never changes your level
     const p = state.progress[step.family];
+    // If the level was changed by hand during the session (in the guide),
+    // that choice wins; feedback only applies to the level that was done.
+    if (p.level !== step.levelIdx) return;
     const max = FAMILIES[step.family].levels.length - 1;
     if (r.feedback === "easy") {
       p.easy++;
