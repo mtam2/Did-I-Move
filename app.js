@@ -616,13 +616,10 @@ function completeSet(value) {
     a.setIdx++;
     if (step.kind === "main" && state.settings.rest > 0) {
       a.phase = "rest";
+      a.restEndsAt = Date.now() + state.settings.rest * 1000;
       saveState();
+      startTimer(state.settings.rest, endRest);
       render();
-      startTimer(state.settings.rest, () => {
-        a.phase = "work";
-        saveState();
-        render();
-      });
       return;
     }
   } else {
@@ -639,11 +636,31 @@ function completeSet(value) {
   render();
 }
 
-function skipRest() {
-  stopTimer();
-  state.active.phase = "work";
+function endRest() {
+  const a = state.active;
+  if (!a) return;
+  a.phase = "work";
+  delete a.restEndsAt;
   saveState();
   render();
+}
+
+function skipRest() {
+  stopTimer();
+  endRest();
+}
+
+// After a reload mid-rest there is no in-memory timer; rebuild it from the
+// persisted end time, or end the rest straight away if it already elapsed.
+function resumeRestIfNeeded() {
+  const a = state.active;
+  if (!a || a.phase !== "rest" || timer) return;
+  const remaining = typeof a.restEndsAt === "number" ? (a.restEndsAt - Date.now()) / 1000 : 0;
+  if (remaining <= 0) {
+    endRest();
+    return;
+  }
+  startTimer(remaining, endRest);
 }
 
 function skipStep() {
@@ -1003,7 +1020,13 @@ const WEEKS = 12;
 function renderHeatmap() {
   const days = doneDays();
   const byDay = {};
-  for (const s of state.sessions) byDay[dayKey(s.finishedAt)] = s;
+  // Sessions are newest-first; keep the first seen unless it was only the
+  // minimum and a full round exists for the same day.
+  for (const s of state.sessions) {
+    const key = dayKey(s.finishedAt);
+    const cur = byDay[key];
+    if (!cur || (cur.short && !s.short)) byDay[key] = s;
+  }
   const today = startOfDay(Date.now());
   const todayKeyStr = dayKey(today);
   // Columns are weeks starting Monday; the last column contains today.
@@ -1056,6 +1079,11 @@ function renderSession() {
   const mainSteps = a.steps.filter((s) => s.kind === "main").length;
   const mainNo = step.kind === "main" ? a.steps.slice(0, a.stepIdx + 1).filter((s) => s.kind === "main").length : 0;
 
+  if (a.phase === "rest") {
+    resumeRestIfNeeded();
+    if (a.phase !== "rest") return; // endRest() re-rendered
+  }
+
   let control = "";
   if (a.phase === "rest") {
     control = `
@@ -1075,6 +1103,15 @@ function renderSession() {
           <button data-fb="hard">too hard</button>
         </div>
         <p class="hint">Two "too easy" in a row moves you up a level. "Too hard" moves you down.</p>
+      </div>`;
+  } else if (timed && timer && timer.switching) {
+    control = `
+      <div class="timed-box">
+        <div class="side-label">Switch sides…</div>
+        ${renderCountdown(SIDE_SWITCH_SECONDS)}
+        <div class="timed-buttons">
+          <button id="btn-switch-skip">ready</button>
+        </div>
       </div>`;
   } else if (timed) {
     const running = timer && timer.running;
@@ -1154,17 +1191,18 @@ function renderSession() {
       if (step.perSide && a.side === 0) {
         a.side = 1;
         saveState();
+        startTimer(SIDE_SWITCH_SECONDS, startSecondSide);
+        timer.switching = true;
         render();
-        startTimer(SIDE_SWITCH_SECONDS, () => {
-          startTimer(step.seconds, finishTimed);
-          render();
-        });
-        const label = el.querySelector(".side-label");
-        if (label) label.textContent = "Switch sides…";
         return;
       }
       completeSet(step.seconds);
     };
+    const startSecondSide = () => {
+      startTimer(step.seconds, finishTimed);
+      render();
+    };
+    on("#btn-switch-skip", startSecondSide);
     on("#btn-timer-start", () => {
       startTimer(step.seconds, finishTimed);
       render();
@@ -1460,18 +1498,24 @@ async function importString(text) {
     alert("That doesn't look like a Did I Move? export string. Copy the whole thing, starting at DIM1.");
     return false;
   }
-  if (!data || !Array.isArray(data.sessions) || typeof data.progress !== "object") {
+  if (!data || !Array.isArray(data.sessions) || !data.progress || typeof data.progress !== "object") {
     alert("That string is missing the expected sessions/progress structure.");
     return false;
   }
-  const msg = `Merge ${data.sessions.length} session(s) into your log? Sessions you already have are skipped, and for each exercise you keep whichever level is higher.`;
+  const validSession = (s) =>
+    !!s &&
+    typeof s.finishedAt === "number" &&
+    Array.isArray(s.exercises) &&
+    s.exercises.every((x) => !!x && typeof x === "object" && Array.isArray(x.sets));
+  const incoming = data.sessions.filter(validSession);
+  const malformed = data.sessions.length - incoming.length;
+  const msg = `Merge ${incoming.length} session(s) into your log? Sessions you already have are skipped, and for each exercise you keep whichever level is higher.`;
   if (!confirm(msg)) return false;
 
   const existing = new Set(state.sessions.map((s) => s.finishedAt));
   let added = 0;
   let skipped = 0;
-  for (const s of data.sessions) {
-    if (!s || typeof s.finishedAt !== "number") continue;
+  for (const s of incoming) {
     if (existing.has(s.finishedAt)) {
       skipped++;
       continue;
@@ -1492,7 +1536,10 @@ async function importString(text) {
 
   saveState();
   render();
-  alert(`Imported ${added} session(s)` + (skipped ? ` (${skipped} skipped)` : "") + ".");
+  const notes = [];
+  if (skipped) notes.push(`${skipped} already present`);
+  if (malformed) notes.push(`${malformed} malformed, ignored`);
+  alert(`Imported ${added} session(s)` + (notes.length ? ` (${notes.join(", ")})` : "") + ".");
   return true;
 }
 
@@ -1574,14 +1621,23 @@ function applyDarkMode(dark) {
 }
 
 function initDarkMode() {
-  const stored = localStorage.getItem(DARK_KEY);
+  let stored = null;
+  try {
+    stored = localStorage.getItem(DARK_KEY);
+  } catch (e) {
+    // Storage may be blocked; fall through to the system preference.
+  }
   if (stored !== null) applyDarkMode(stored === "1");
   else applyDarkMode(window.matchMedia("(prefers-color-scheme: dark)").matches);
 }
 
 document.getElementById("btn-dark-mode").addEventListener("click", () => {
   const isDark = !document.body.classList.contains("dark");
-  localStorage.setItem(DARK_KEY, isDark ? "1" : "0");
+  try {
+    localStorage.setItem(DARK_KEY, isDark ? "1" : "0");
+  } catch (e) {
+    // Preference just won't persist.
+  }
   applyDarkMode(isDark);
 });
 
@@ -1599,27 +1655,49 @@ function updateFullscreenBtn() {
   document.body.classList.toggle("fullscreen", isFs);
 }
 
+const fullscreenSupported = typeof document.documentElement.requestFullscreen === "function";
+if (!fullscreenSupported) btnFullscreen.hidden = true;
+
 btnFullscreen.addEventListener("click", () => {
-  if (document.fullscreenElement) document.exitFullscreen();
-  else document.documentElement.requestFullscreen().catch(() => {});
+  try {
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    else document.documentElement.requestFullscreen().catch(() => {});
+  } catch (e) {
+    // Some browsers (iPhone Safari) throw synchronously; nothing to do.
+  }
 });
 
 document.addEventListener("fullscreenchange", updateFullscreenBtn);
 
 // Keep the screen awake during a session when the browser allows it.
 let wakeLock = null;
+let wakeLockPending = false;
 async function syncWakeLock() {
   if (!("wakeLock" in navigator)) return;
+  if (wakeLockPending) return; // a request is in flight; it re-syncs when done
   const want = !!state.active && document.visibilityState === "visible";
   try {
     if (want && !wakeLock) {
-      wakeLock = await navigator.wakeLock.request("screen");
-      wakeLock.addEventListener("release", () => (wakeLock = null));
+      wakeLockPending = true;
+      const lock = await navigator.wakeLock.request("screen");
+      wakeLockPending = false;
+      lock.addEventListener("release", () => {
+        if (wakeLock === lock) wakeLock = null;
+      });
+      wakeLock = lock;
+      // State may have changed while we waited (e.g. session finished).
+      const stillWant = !!state.active && document.visibilityState === "visible";
+      if (!stillWant) {
+        await lock.release();
+        wakeLock = null;
+      }
     } else if (!want && wakeLock) {
-      await wakeLock.release();
+      const lock = wakeLock;
       wakeLock = null;
+      await lock.release();
     }
   } catch (e) {
+    wakeLockPending = false;
     wakeLock = null;
   }
 }
